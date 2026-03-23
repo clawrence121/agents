@@ -1,0 +1,10 @@
+name = "github-notifier"
+main = "src/index.ts"
+compatibility_date = "2025-03-21"
+
+[[kv_namespaces]]
+binding = "KV"
+id = "b50d29ec72164458af212b8f95e7624b"
+
+[triggers]
+crons = ["*/5 * * * *"]
