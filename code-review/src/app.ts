@@ -65,8 +65,15 @@ app.post("/webhook", async (c) => {
     htmlUrl: pr.html_url,
   };
 
-  const instanceId = `review-${params.repo}-${params.prNumber}-${Date.now()}`;
-  await c.env.REVIEW_WORKFLOW.create({ id: instanceId, params });
+  const instanceId = `review-${params.repo}-${params.prNumber}-${params.headSha}`;
+  try {
+    await c.env.REVIEW_WORKFLOW.create({ id: instanceId, params });
+  } catch (e) {
+    if (e instanceof Error && e.message.includes("already exists")) {
+      return c.json({ instanceId, deduplicated: true }, 200);
+    }
+    throw e;
+  }
 
   return c.json({ instanceId }, 202);
 });
