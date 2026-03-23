@@ -109,12 +109,6 @@ In addition to the team checklist, watch for:
 - Opportunities to reduce duplication
 - Missing edge case handling
 
-**Positives (good patterns to reinforce):**
-- Well-structured code
-- Good test coverage
-- Thoughtful error handling
-- Clean abstractions
-
 ### 7. Guidelines
 
 - Be specific: reference exact file paths and describe the location of issues
@@ -134,8 +128,9 @@ Return your findings as structured JSON between the `---RESULT_START---` and `--
   "summary": "1-2 sentence overall assessment",
   "findings": [
     {
-      "severity": "critical|warning|suggestion|positive",
+      "severity": "critical|warning|suggestion",
       "file": "path/to/file.ts",
+      "line": 42,
       "description": "Specific, actionable description"
     }
   ],
@@ -144,6 +139,7 @@ Return your findings as structured JSON between the `---RESULT_START---` and `--
 ---RESULT_END---
 ```
 
+- Each finding's `line` should be the line number in the new version of the file where the issue occurs. This will be used to place inline comments on the PR diff. Omit `line` only for file-level or general findings that don't apply to a specific line.
 - Use `approve` if there are no critical or warning issues
 - Use `request-changes` if there are critical or warning issues that must be addressed
 - Use `comment` if there are only suggestions
