@@ -20,11 +20,16 @@ app.post("/webhook", async (c) => {
     return c.text("Invalid signature", 401);
   }
 
+  const body = JSON.parse(rawBody);
+
+  if (event === "issue_comment") {
+    return handleCommentTrigger(c.env, body);
+  }
+
   if (event !== "pull_request") {
     return c.text("Ignored: not a pull_request event", 200);
   }
 
-  const body = JSON.parse(rawBody);
   const action: string = body.action;
   const pr = body.pull_request;
 
@@ -104,6 +109,73 @@ app.get("/trigger", async (c) => {
 
   return c.json({ instanceId }, 202);
 });
+
+async function handleCommentTrigger(env: AppEnv, body: any): Promise<Response> {
+  const action: string = body.action;
+  const comment: string = body.comment?.body ?? "";
+  const issue = body.issue;
+  const repoName: string = body.repository.name;
+
+  const isTrigger =
+    action === "created" &&
+    issue?.pull_request &&
+    comment.includes("@clawrence121") &&
+    comment.includes("run code-review");
+
+  if (!isTrigger) {
+    return new Response("Ignored: not a review trigger comment", { status: 200 });
+  }
+
+  if (!ALLOWED_REPOS.has(repoName)) {
+    return new Response(`Ignored: repo ${repoName} not in allow list`, { status: 200 });
+  }
+
+  const owner: string = body.repository.owner.login;
+  const commentId: number = body.comment.id;
+
+  // Delete the trigger comment to avoid confusion
+  await deleteComment(env, owner, repoName, commentId);
+
+  const prData = await fetchPRMetadata(env, owner, repoName, issue.number);
+  if (!prData) {
+    return new Response("Failed to fetch PR metadata", { status: 500 });
+  }
+
+  const instanceId = `review-${repoName}-${issue.number}-${commentId}`;
+  try {
+    await env.REVIEW_WORKFLOW.create({ id: instanceId, params: prData });
+  } catch (e) {
+    if (e instanceof Error && e.message.includes("already exists")) {
+      return Response.json({ instanceId, deduplicated: true }, { status: 200 });
+    }
+    throw e;
+  }
+
+  return Response.json({ instanceId }, { status: 202 });
+}
+
+async function deleteComment(
+  env: AppEnv,
+  owner: string,
+  repo: string,
+  commentId: number,
+): Promise<void> {
+  const res = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/issues/comments/${commentId}`,
+    {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${env.GITHUB_TOKEN}`,
+        Accept: "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+        "User-Agent": "code-review-worker",
+      },
+    },
+  );
+  if (!res.ok) {
+    console.error(`Failed to delete comment ${commentId}: ${res.status}`);
+  }
+}
 
 async function fetchPRMetadata(
   env: AppEnv,
