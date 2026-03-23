@@ -31,7 +31,7 @@ export class ReviewWorkflow extends WorkflowEntrypoint<AppEnv, ReviewParams> {
       sandbox,
       sessionId: event.instanceId,
       workdir: `/home/user/${params.repo}`,
-      model: { providerID: "anthropic", modelID: "claude-opus-4-6" },
+      model: { providerID: "anthropic", modelID: "claude-sonnet-4-6" },
       gateway: {
         proxies: [
           proxies.anthropic({ apiKey: this.env.ANTHROPIC_API_KEY }),
@@ -52,9 +52,7 @@ export class ReviewWorkflow extends WorkflowEntrypoint<AppEnv, ReviewParams> {
       "clone",
       { timeout: "10 minutes", retries: { limit: 1, delay: "30 seconds" } },
       async () => {
-        await sandbox.exec(
-          `git clone --depth 50 ${cloneUrl} ${workdir}`,
-        );
+        await sandbox.exec(`git clone --depth 50 ${cloneUrl} ${workdir}`);
         await sandbox.exec(
           `git fetch origin pull/${params.prNumber}/head:pr-branch`,
           { cwd: workdir },
