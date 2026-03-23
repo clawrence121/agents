@@ -37,6 +37,11 @@ app.post("/webhook", async (c) => {
     return c.text(`Ignored: repo ${repoName} not in allow list`, 200);
   }
 
+  const prAuthor: string = pr.user?.login ?? "";
+  if (prAuthor === "dependabot[bot]") {
+    return c.text("Ignored: dependabot PR", 200);
+  }
+
   // Only trigger on:
   // 1. PR opened
   // 2. PR marked ready for review (was draft, now isn't)
