@@ -70,7 +70,7 @@ app.post("/webhook", async (c) => {
     htmlUrl: pr.html_url,
   };
 
-  const instanceId = `review-${params.repo}-${params.prNumber}-${params.headSha}`;
+  const instanceId = `review-${params.repo}-${params.prNumber}-${params.headSha.slice(0, 12)}`;
   try {
     await c.env.REVIEW_WORKFLOW.create({ id: instanceId, params });
   } catch (e) {
