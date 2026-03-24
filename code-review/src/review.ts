@@ -6,7 +6,7 @@ import { sendSlackMessage } from "./slack.ts";
 const reviewResultSchema = v.object({
   summary: v.pipe(
     v.string(),
-    v.description("1-2 sentence overall assessment of the PR"),
+    v.description("One short sentence — what does this PR do and is it good to go?"),
   ),
   findings: v.array(
     v.object({
@@ -26,7 +26,7 @@ const reviewResultSchema = v.object({
       ),
       description: v.pipe(
         v.string(),
-        v.description("Specific, actionable description of the finding"),
+        v.description("One terse sentence — say what to change, not what the code currently does"),
       ),
     }),
   ),
@@ -73,12 +73,6 @@ export async function runReview(
   return result;
 }
 
-const SEVERITY_EMOJI: Record<string, string> = {
-  critical: "🔴",
-  warning: "🟡",
-  suggestion: "💡",
-
-};
 
 function formatReviewBody(
   result: ReviewResult,
@@ -87,10 +81,9 @@ function formatReviewBody(
   const lines: string[] = [result.summary];
 
   if (fileLevelFindings.length > 0) {
-    lines.push("", "### Additional findings", "");
+    lines.push("");
     for (const f of fileLevelFindings) {
-      const emoji = SEVERITY_EMOJI[f.severity] ?? "";
-      lines.push(`- ${emoji} **${f.file}**: ${f.description}`);
+      lines.push(`- **${f.file}**: ${f.description}`);
     }
   }
 
@@ -100,9 +93,7 @@ function formatReviewBody(
 function formatCommentBody(
   finding: ReviewResult["findings"][number],
 ): string {
-  const emoji = SEVERITY_EMOJI[finding.severity] ?? "";
-  const label = finding.severity.charAt(0).toUpperCase() + finding.severity.slice(1);
-  return `${emoji} **${label}**: ${finding.description}`;
+  return finding.description;
 }
 
 interface GitHubReviewComment {
