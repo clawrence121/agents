@@ -92,10 +92,24 @@ export interface GitHubNotificationThread {
   unread: boolean;
 }
 
+export type UpdateType =
+  | "merged"
+  | "opened"
+  | "closed"
+  | "approved"
+  | "changes_requested"
+  | "reviewed"
+  | "commented"
+  | "pushed"
+  | "review_requested"
+  | "mentioned"
+  | "assigned";
+
 export interface HydratedPullRequestNotification {
   threadId: string;
   repo: string;
   reason: string;
+  updateType: UpdateType;
   unread: boolean;
   updatedAt: string;
   title: string;
@@ -253,6 +267,60 @@ export async function listGitHubNotifications(env: Env, since: string) {
     }));
 }
 
+function deriveUpdateType(
+  thread: GitHubNotificationThread,
+  pr: PullRequestApiResponse,
+  recentActivity: HydratedPullRequestNotification["recentActivity"],
+  sinceMs: number
+): UpdateType {
+  // Merged takes top priority
+  if (pr.merged && isAfter(pr.merged_at, sinceMs)) {
+    return "merged";
+  }
+  if (pr.merged) {
+    return "merged";
+  }
+
+  // Closed (not merged)
+  if (pr.state === "closed") {
+    return "closed";
+  }
+
+  // Newly opened
+  if (isAfter(pr.created_at, sinceMs)) {
+    return "opened";
+  }
+
+  // Check reviews for approval/changes requested
+  const approvals = recentActivity.reviews.filter((r) => r.state === "APPROVED");
+  const changesRequested = recentActivity.reviews.filter((r) => r.state === "CHANGES_REQUESTED");
+
+  if (changesRequested.length > 0) {
+    return "changes_requested";
+  }
+  if (approvals.length > 0) {
+    return "approved";
+  }
+  if (recentActivity.reviews.length > 0) {
+    return "reviewed";
+  }
+
+  // New commits pushed
+  if (recentActivity.commits.length > 0) {
+    return "pushed";
+  }
+
+  // Comments
+  if (recentActivity.issueComments.length > 0 || recentActivity.reviewComments.length > 0) {
+    return "commented";
+  }
+
+  // Fall back to notification reason
+  if (thread.reason === "mention") return "mentioned";
+  if (thread.reason === "assign") return "assigned";
+  return "review_requested";
+}
+
 function shouldIncludeHydratedThread(
   thread: GitHubNotificationThread,
   pr: PullRequestApiResponse,
@@ -369,10 +437,18 @@ export async function hydratePullRequestNotifications(
       continue;
     }
 
+    const recentActivity = {
+      issueComments,
+      reviewComments,
+      reviews,
+      commits,
+    };
+
     hydrated.push({
       threadId: notification.id,
       repo: notification.repo,
       reason: notification.reason,
+      updateType: deriveUpdateType(notification, pr, recentActivity, sinceMs),
       unread: notification.unread,
       updatedAt: notification.updatedAt,
       title: notification.title,
@@ -392,12 +468,7 @@ export async function hydratePullRequestNotifications(
         changedFiles: pr.changed_files,
         requestedReviewers: (pr.requested_reviewers ?? []).map((reviewer) => reviewer.login),
       },
-      recentActivity: {
-        issueComments,
-        reviewComments,
-        reviews,
-        commits,
-      },
+      recentActivity,
     });
   }
 

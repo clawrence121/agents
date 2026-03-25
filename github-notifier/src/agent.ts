@@ -32,7 +32,7 @@ Rules:
 - Use only the data provided. Do not invent missing details.
 - Write a single concise Slack mrkdwn message.
 - Lead with the most actionable items first.
-- Highlight review requests, merges, and human comments/reviews.
+- Use the "updateType" field (not "reason") to categorize each notification. updateType reflects what actually happened (e.g. "merged", "approved", "pushed", "commented"), while reason is just why GitHub sent the notification.
 - Use bullet points and keep each bullet tight.
 - Group naturally when useful, but do not force every notification into the message if it adds no value.
 - If the digest is empty, return an empty string.`;
@@ -67,7 +67,7 @@ function buildFallbackSlackMessage(digest: NotificationDigest) {
   const bullets = digest.notifications.map((notification) => {
     const segments: string[] = [
       `*${notification.repo}* <${notification.pr.url}|#${notification.pr.number} ${notification.pr.title}>`,
-      `(${notification.reason})`,
+      `(${notification.updateType})`,
     ];
 
     if (notification.recentActivity.reviews.length > 0) {
