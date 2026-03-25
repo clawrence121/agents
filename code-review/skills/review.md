@@ -148,9 +148,16 @@ The most common failure mode is **over-explaining**. Never narrate the current b
 
 Rules:
 
+- **Use GitHub suggestion blocks for simple code changes.** When the fix is a concrete code replacement (e.g., changing an import, renaming a variable, swapping a method call), use a suggestion block instead of describing the change in prose. The suggestion block should contain the corrected line(s) exactly as they should appear. You can add a short sentence before the block if context is needed, but often the suggestion alone is enough. Example:
+  ````
+  ```suggestion
+  import { z } from 'zod/v4';
+  ```
+  ````
+  Only use suggestion blocks for single-line or small multi-line changes where the replacement is unambiguous. For broader structural changes or questions, use a normal comment.
 - **Maximum one sentence per comment.** Two only if absolutely necessary.
 - **Lead with the action, not the analysis.** Say what to do or ask a question. Don't describe what the code currently does before getting to the point.
-- **No emoji, no bold labels, no markdown formatting** in comment text.
+- **No emoji, no bold labels, no markdown formatting** in comment text (suggestion blocks are the exception).
 - **No rule-citing.** Never reference CLAUDE.md, the team checklist, or any convention by name — just state what needs to change.
 - **No filler phrases.** Never write "However", "It's worth noting", "Consider whether", "More importantly", "This is especially relevant", "This means that".
 - **Questions are good.** A short question is almost always better than a long explanation.
